@@ -1,0 +1,87 @@
+1. 写一个正则表达式 匹配所有 Number 直接量
+- 不清楚0.0， .1这类是不是合法Number的，下面的正则没有特别考虑这种
+Number = 符号|无符号 + 整数|小数 + e + 符号｜无符号 + >0的整数
+answer = [+|-]?[0-9]*(.[0-9]*[1-9])?(e[+|-]?[1-9][0-9]*)?
+
+2. 写一个 UTF-8 Encoding 的函数
+UTF-8 (8-bit Unicode Transformation Format) is a variable width character encoding
+capable of encoding all 1,112,064 valid code points in Unicode using
+one to four one-byte (8-bit) code units. The encoding is defined by the
+Unicode Standard, and was originally designed by Ken Thompson and Rob Pike.
+
+- variable width character encoding
+- one to four one-byte (8-bit) code units.
+
+UTF-8 encoding规则
+- 把字符的codepoint转成2进制
+- 去掉前面的leading zero
+- 根据下面的规则转换，x表示codepoint的bits
+- 如果去掉leading zero后的code point不超过7位，按照第一行规则
+- 如果去掉leading zero后的code point不超过11位，按照第二行规则
+
+|-------------------------------------------------------------------|
+|  Number |  Bits for  |           |          |          |          |
+|of bytes | code point | Byte 1    ｜ Byte 2  ｜  Byte 3 ｜ Byte 4   |
+|-------------------------------------------------------------------|
+|  1      |      7     | 0xxxxxxx  |          |          |          |
+|  2      |      11    | 110xxxxx  | 10xxxxxx |          |          |
+|  3      |      16    | 1110xxxx  | 10xxxxxx | 10xxxxxx |          |
+|  4      |      21    | 11110xxx  | 10xxxxxx | 10xxxxxx | 10xxxxxx |
+|-------------------------------------------------------------------|
+
+例子1 字符: "A"，
+codepoint: U+0041, binary is 0100 0001
+After removing leading zero:  100 0001，total 7bits, 按第一行规则
+UTF-8:  0100 0001
+
+例子2 字符: "€"
+codepoint: U+20AC, binary is 0010 0000 1010 1100
+After removing leading zero:   10 0000 1010 1100，total 14 bits, 按第三行规则
+       10 0000 1010 1100
+  1110xxxx  | 10xxxxxx | 10xxxxxx
+        10      000010     101100
+UTF-8: 11100010 | 10000010 | 10101100
+
+1000  8
+1001  9
+1010  a
+1011  b
+1100  c
+// codepoint < 0x80 按第一行规则
+// codepoint < 0x800   (0000 1000 0000 0000) 按第二行规则
+//    codepoint 右移6位 然后与 110xxxxx (0xc0) 取或 得到byte 1
+//    codepoint & 00111111(0x3f) 得到后6位， 然后 & 10xxxxxx(0x80) 得到byte 2
+// codepoint < 0x10000       (1 0000 0000 0000 0000) 按第三行规则
+// codepoint < 0x110000            (10 0000 0000 0000 0000 0000)
+// largest unicode is U+10FFFF
+
+function utf8_encoding(data) {
+  var arr = [];
+  for (let i = 0; i < data.length; i++) {
+      let charcode = data.charCodeAt(i);
+      if (charcode < 0x80) {
+        arr.push(charcode);
+      } else if (charcode < 0x800) {
+        arr.push(0xc0 | (charcode >> 6),
+                 0x80 | (charcode & 0x3f));
+      } else if (charcode <= 0xffff) {
+        arr.push(0xe0 | (charcode >> 12),
+                 0x80 | ((charcode>>6) & 0x3f),
+                 0x80 | (charcode & 0x3f));
+      } else {
+        // surrogate pair, Unicode characters with high code-points
+        // this range (0x10000 to 0x10FFFF).
+        i++;
+        charcode = 0x010000 + (((charcode&0x3ff)<<10)|(str.charCodeAt(i)&0x3ff))
+        arr.push(0xf0 | (charcode >>18),
+                 0x80 | ((charcode>>12) & 0x3f),
+                 0x80 | ((charcode>>6) & 0x3f),
+                 0x80 | (charcode & 0x3f));
+      }
+  }
+  return arr;
+}
+
+
+3.写一个正则表达式，匹配所有的字符串直接量，单引号和双引号
+([\s\S]*)
